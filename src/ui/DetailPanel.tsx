@@ -95,7 +95,7 @@ const EARTH_G = 9.807;
 
 export function DetailPanel() {
   const selectedId = useUIStore((s) => s.selectedId);
-  const { focus, openPanel, closePanel, setActiveWonder } = useUIStore();
+  const { focus, openPanel, closePanel, setActiveWonder, enterWonderExplore } = useUIStore();
 
   const body = getBody(selectedId ?? undefined);
   const wonder = !body ? getWonder(selectedId ?? '') : undefined;
@@ -202,26 +202,37 @@ export function DetailPanel() {
   void ordinal; // unused in wonder mode
 
   const footer = (
-    <div className="flex gap-2">
+    <div className="flex flex-col gap-2">
       <button
         type="button"
-        aria-label="Learn more about this wonder"
-        onClick={() => openPanel('learn')}
-        className="hud-button flex-1 py-1.5 text-xs"
+        aria-label={`Walk around ${site.name} in 3D`}
+        onClick={() => enterWonderExplore(site.id)}
+        className="hud-button w-full py-2 text-xs font-semibold"
+        data-active
       >
-        Learn more
+        ⛶ Walk around in 3D
       </button>
-      <button
-        type="button"
-        aria-label="Back to Earth"
-        onClick={() => {
-          setActiveWonder(null);
-          focus('earth');
-        }}
-        className="hud-button flex-1 py-1.5 text-xs"
-      >
-        Back to Earth
-      </button>
+      <div className="flex gap-2">
+        <button
+          type="button"
+          aria-label="Learn more about this wonder"
+          onClick={() => openPanel('learn')}
+          className="hud-button flex-1 py-1.5 text-xs"
+        >
+          Learn more
+        </button>
+        <button
+          type="button"
+          aria-label="Back to Earth"
+          onClick={() => {
+            setActiveWonder(null);
+            focus('earth');
+          }}
+          className="hud-button flex-1 py-1.5 text-xs"
+        >
+          Back to Earth
+        </button>
+      </div>
     </div>
   );
 

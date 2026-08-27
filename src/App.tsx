@@ -2,11 +2,13 @@ import { Suspense, useState } from 'react';
 import { Canvas } from '@react-three/fiber';
 import { AdaptiveDpr, PerformanceMonitor } from '@react-three/drei';
 import { EffectComposer, Bloom, Vignette } from '@react-three/postprocessing';
+import { AnimatePresence } from 'motion/react';
 import * as THREE from 'three';
 import { SolarSystem } from './scene/SolarSystem';
 import { SurfaceMode } from './scene/SurfaceMode';
 import { Hud } from './ui/Hud';
 import { LoadingScreen } from './ui/LoadingScreen';
+import { WonderExplorer } from './ui/WonderExplorer';
 import { useSimStore, QUALITY_SETTINGS } from './state/useSimStore';
 import { useUIStore } from './state/useUIStore';
 import { useKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
@@ -35,6 +37,7 @@ export default function App() {
   const quality = useSimStore((s) => s.quality);
   const setQuality = useSimStore((s) => s.setQuality);
   const mode = useUIStore((s) => s.mode);
+  const exploringWonderId = useUIStore((s) => s.exploringWonderId);
   const [dpr, setDpr] = useState(1.5);
 
   useKeyboardShortcuts();
@@ -79,6 +82,7 @@ export default function App() {
       </Canvas>
 
       <Hud />
+      <AnimatePresence>{exploringWonderId && <WonderExplorer />}</AnimatePresence>
       <LoadingScreen />
     </div>
   );

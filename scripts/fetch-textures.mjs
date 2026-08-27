@@ -36,6 +36,8 @@ const CONCURRENCY = 4;
 // ---------------------------------------------------------------------------
 const LICENCE_SSS  = 'CC BY 4.0 — © INOVE / solarsystemscope.com';
 const LICENCE_USGS = 'U.S. Government Work (public domain) — NASA / USGS Astrogeology';
+const LICENCE_WIKI_PD = 'Public domain — Wikimedia Commons (NASA / Cassini Imaging Team)';
+const LICENCE_CCBYSA  = 'CC BY-SA 3.0 — Askaniy Anpilogov & John van Vliet via Wikimedia Commons';
 
 // ---------------------------------------------------------------------------
 // Texture catalogue
@@ -55,6 +57,20 @@ const USGS = {
   pluto:     'https://astrogeology.usgs.gov/ckan/dataset/a5f1b7f4-9822-4697-a201-e23ef4bd3e16/resource/96be2aa1-f384-4a9f-9458-a8431a0e7956/download/pluto_newhorizons_global_mosaic_300m_jul2017_1024.jpg',
   triton:    'https://astrogeology.usgs.gov/ckan/dataset/acf2bb70-6dce-4207-9e10-fee59e28ad7c/resource/f20d9fea-a0af-416a-b282-2ac386c3bb36/download/full.jpg',
   enceladus: 'https://astrogeology.usgs.gov/ckan/dataset/f5c79e2e-2790-4087-8922-ab0ffb753332/resource/1a18653d-ad46-465b-942d-4479683c3126/download/enceladus_full.jpg',
+};
+
+// Wikimedia Commons — Cassini / USGS / CC BY-SA sources
+// All URLs confirmed GET 200 + correct image Content-Type before addition.
+const WIKI = {
+  // NASA Cassini Imaging Team — Public domain
+  // https://commons.wikimedia.org/wiki/File:2009_Map_of_Titan_cylindrical_projection.jpg
+  titan:   'https://upload.wikimedia.org/wikipedia/commons/7/7b/2009_Map_of_Titan_cylindrical_projection.jpg',
+  // USGS equirectangular mosaic, 5499×2999 — Public domain
+  // https://commons.wikimedia.org/wiki/File:USGS-Phobos-MarsMoon-Map.png
+  phobos:  'https://upload.wikimedia.org/wikipedia/commons/2/2d/USGS-Phobos-MarsMoon-Map.png',
+  // Askaniy Anpilogov & John van Vliet, 4096×2048 equirectangular — CC BY-SA 3.0
+  // https://commons.wikimedia.org/wiki/File:Deimos_map_by_Askaniy.png
+  deimos:  'https://upload.wikimedia.org/wikipedia/commons/7/72/Deimos_map_by_Askaniy.png',
 };
 
 const TEXTURES = {
@@ -89,10 +105,29 @@ const TEXTURES = {
   triton:   { ext: 'jpg', primary: null, fallbacks: [{ url: USGS.triton,   licence: LICENCE_USGS }] },
   enceladus:{ ext: 'jpg', primary: null, fallbacks: [{ url: USGS.enceladus,licence: LICENCE_USGS }] },
 
+  // ── SSS fictional dwarfs (all confirmed GET 200 + image/jpeg) ─────────────
+  eris:     { ext: 'jpg', primary: '2k_eris_fictional',     fallbacks: [] },
+  haumea:   { ext: 'jpg', primary: '2k_haumea_fictional',   fallbacks: [] },
+  makemake: { ext: 'jpg', primary: '2k_makemake_fictional', fallbacks: [] },
+
   // ── No verified upstream image — procedural fallback at runtime ────────────
-  titan:    { ext: 'jpg', primary: null, fallbacks: [] }, // Titan's thick haze obscures surface; no usable equirect found
-  phobos:   { ext: 'jpg', primary: null, fallbacks: [] }, // no verified equirectangular JPEG found
-  deimos:   { ext: 'jpg', primary: null, fallbacks: [] }, // no verified equirectangular JPEG found
+  titan:    { ext: 'jpg', primary: null, fallbacks: [{ url: WIKI.titan,   licence: LICENCE_WIKI_PD }] },
+  phobos:   { ext: 'png', primary: null, fallbacks: [{ url: WIKI.phobos,  licence: LICENCE_USGS }] },
+  deimos:   { ext: 'png', primary: null, fallbacks: [{ url: WIKI.deimos,  licence: LICENCE_CCBYSA }] },
+
+  // ── Normal / specular maps ────────────────────────────────────────────────
+  // NOTE: Solar System Scope removed their normal/specular/bump maps from the
+  // free CC BY 4.0 download tier (all named variants return 200 text/html).
+  // NASA/USGS publish only TIFF height maps, not RGB normal maps as JPEG.
+  // No verified free JPEG normal-map source was found after exhaustive probing;
+  // these keys intentionally carry no sources so useOptionalTexture returns null.
+  // The framework is in place — if a verified URL is found, add it here.
+  earth_normal:   { ext: 'jpg', primary: null, fallbacks: [] },
+  moon_normal:    { ext: 'jpg', primary: null, fallbacks: [] },
+  mars_normal:    { ext: 'jpg', primary: null, fallbacks: [] },
+  mercury_normal: { ext: 'jpg', primary: null, fallbacks: [] },
+  venus_normal:   { ext: 'jpg', primary: null, fallbacks: [] },
+  earth_specular: { ext: 'jpg', primary: null, fallbacks: [] },
 };
 
 // ---------------------------------------------------------------------------
@@ -181,7 +216,7 @@ const results = await runWithConcurrency(tasks, CONCURRENCY);
 
 // Tally
 let downloaded = 0, skipped = 0, failed = 0, procedural = 0;
-const sssFiles = [], usgsFiles = [], skippedFiles = [];
+const sssFiles = [], usgsFiles = [], wikiPdFiles = [], wikiCcFiles = [], skippedFiles = [];
 
 for (let i = 0; i < keys.length; i++) {
   const key = keys[i];
@@ -190,15 +225,14 @@ for (let i = 0; i < keys.length; i++) {
 
   if (r.status === 'procedural') {
     procedural++;
-  } else if (r.status === 'downloaded') {
-    downloaded++;
-    if (r.licence === LICENCE_SSS)  sssFiles.push({ key, ext, url: r.url });
-    else                             usgsFiles.push({ key, ext, url: r.url });
-  } else if (r.status === 'skipped_exists') {
-    skipped++;
-    if (r.licence === LICENCE_SSS)  sssFiles.push({ key, ext, url: r.url });
-    else                             usgsFiles.push({ key, ext, url: r.url });
-    skippedFiles.push(key);
+  } else if (r.status === 'downloaded' || r.status === 'skipped_exists') {
+    if (r.status === 'downloaded') downloaded++;
+    else { skipped++; skippedFiles.push(key); }
+    if      (r.licence === LICENCE_SSS)     sssFiles.push({ key, ext, url: r.url });
+    else if (r.licence === LICENCE_USGS)    usgsFiles.push({ key, ext, url: r.url });
+    else if (r.licence === LICENCE_WIKI_PD) wikiPdFiles.push({ key, ext, url: r.url });
+    else if (r.licence === LICENCE_CCBYSA)  wikiCcFiles.push({ key, ext, url: r.url });
+    else                                    usgsFiles.push({ key, ext, url: r.url }); // fallback bucket
   } else if (r.status === 'failed') {
     failed++;
   }
@@ -212,8 +246,8 @@ console.log(`\nDone — ${downloaded} downloaded, ${skipped} skipped, ${failed} 
 const md = [
   '# Texture Attribution',
   '',
-  'Textures in this directory are sourced from two providers.',
-  'Each file lists its exact source URL and licence below.',
+  'Textures in this directory are sourced from the providers listed below.',
+  'Each file lists its exact source URL and licence.',
   '',
 ];
 
@@ -243,6 +277,35 @@ if (usgsFiles.length > 0) {
     '| File | Source URL |',
     '|------|-----------|',
     ...usgsFiles.map(f => `| ${f.key}.${f.ext} | ${f.url} |`),
+    '',
+  );
+}
+
+if (wikiPdFiles.length > 0) {
+  md.push(
+    '## Wikimedia Commons — Public Domain (NASA / Cassini Imaging Team)',
+    '',
+    'Source: <https://commons.wikimedia.org/>  ',
+    'Licence: **Public domain** — NASA / Cassini Imaging Team',
+    '',
+    '| File | Source URL |',
+    '|------|-----------|',
+    ...wikiPdFiles.map(f => `| ${f.key}.${f.ext} | ${f.url} |`),
+    '',
+  );
+}
+
+if (wikiCcFiles.length > 0) {
+  md.push(
+    '## Wikimedia Commons — CC BY-SA 3.0',
+    '',
+    'Source: <https://commons.wikimedia.org/>  ',
+    'Licence: **Creative Commons Attribution-ShareAlike 3.0 Unported (CC BY-SA 3.0)**  ',
+    'Authors: Askaniy Anpilogov & John van Vliet',
+    '',
+    '| File | Source URL |',
+    '|------|-----------|',
+    ...wikiCcFiles.map(f => `| ${f.key}.${f.ext} | ${f.url} |`),
     '',
   );
 }

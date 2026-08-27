@@ -9,15 +9,17 @@
 import * as THREE from 'three';
 import { useState, useEffect } from 'react';
 import { generateBodyTexture, generateRingTexture } from './proceduralTexture.ts';
+import { deriveNormalMap } from './deriveNormalMap.ts';
 
 export type TextureKind = 'rocky' | 'gas' | 'icy' | 'star' | 'cloud' | 'ring';
 
 // Keys whose downloaded file uses .png instead of .jpg
-const PNG_KEYS = new Set(['saturn_ring']);
+const PNG_KEYS = new Set(['saturn_ring', 'phobos', 'deimos']);
 
 // Module-level cache: shared across remounts, never disposed.
 const bodyCache = new Map<string, THREE.Texture>();
 const ringCache = new Map<string, THREE.Texture>();
+const optionalCache = new Map<string, THREE.Texture | null>();
 
 const warned = new Set<string>();
 
@@ -130,6 +132,157 @@ export function useRingTexture(
       },
     );
   }, [key, color]);
+
+  return texture;
+}
+
+// ---------------------------------------------------------------------------
+// useDerivedNormal
+// Returns a real downloaded normal map when one exists on disk, otherwise
+// synthesises one by Sobel-filtering the colour map's luminance.  Never
+// returns a procedural texture — only a genuine derived or downloaded map.
+// Must not block the first frame: derive runs inside useEffect.
+// ---------------------------------------------------------------------------
+
+/** Cache for derived normal maps (separate from optionalCache). */
+const derivedNormalCache = new Map<string, THREE.Texture | null>();
+
+export function useDerivedNormal(
+  textureKey: string,
+  colorMap: THREE.Texture,
+  strength: number = 2.0,
+): THREE.Texture | null {
+  const normalKey = `${textureKey}_normal`;
+
+  const [normalMap, setNormalMap] = useState<THREE.Texture | null>(() => {
+    // Empty key sentinel: derivation not requested for this body.
+    if (!textureKey) return null;
+    // Immediately return any already-computed result (cache hit on remount)
+    if (derivedNormalCache.has(normalKey)) {
+      return derivedNormalCache.get(normalKey) ?? null;
+    }
+    if (optionalCache.has(normalKey)) {
+      return optionalCache.get(normalKey) ?? null;
+    }
+    return null;
+  });
+
+  useEffect(() => {
+    // Empty key: derivation not requested for this body type (e.g., gas giants).
+    if (!textureKey) return;
+
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+
+    const attemptDerive = () => {
+      const derived = deriveNormalMap(colorMap, textureKey, strength);
+      if (derived) {
+        derivedNormalCache.set(normalKey, derived);
+        setNormalMap(derived);
+      } else {
+        // Source image not decoded yet — retry once after a short delay.
+        derivedNormalCache.set(normalKey, null);
+        timeoutId = setTimeout(() => {
+          const retry = deriveNormalMap(colorMap, textureKey, strength);
+          if (retry) {
+            derivedNormalCache.set(normalKey, retry);
+            setNormalMap(retry);
+          }
+        }, 500);
+      }
+    };
+
+    // --- Priority 1: real downloaded file already in cache ---
+    if (optionalCache.has(normalKey)) {
+      const cached = optionalCache.get(normalKey) ?? null;
+      if (cached !== null) { setNormalMap(cached); return; }
+      // null = file missing; fall through to derivation
+    }
+
+    // --- Priority 2: already-derived map ---
+    if (derivedNormalCache.has(normalKey)) {
+      setNormalMap(derivedNormalCache.get(normalKey) ?? null);
+      return;
+    }
+
+    // --- Priority 3: probe real file, derive on miss ---
+    if (!optionalCache.has(normalKey)) {
+      const loader = new THREE.TextureLoader();
+      loader.load(
+        textureUrl(normalKey),
+        (loaded) => {
+          loaded.colorSpace = THREE.NoColorSpace;
+          loaded.anisotropy  = 4;
+          optionalCache.set(normalKey, loaded);
+          derivedNormalCache.set(normalKey, loaded);
+          setNormalMap(loaded);
+        },
+        undefined,
+        () => {
+          // File absent — record miss and derive.
+          optionalCache.set(normalKey, null);
+          attemptDerive();
+        },
+      );
+    } else {
+      // Miss already recorded; derive now.
+      attemptDerive();
+    }
+
+    return () => { if (timeoutId !== undefined) clearTimeout(timeoutId); };
+  }, [textureKey, colorMap, strength, normalKey]);
+
+  return normalMap;
+}
+// Loads an optional secondary map (normal, specular, night-lights, etc.).
+// Returns null when the file is absent — never substitutes a procedural texture
+// because a wrong normal map corrupts lighting more than having none.
+// colorSpace defaults to THREE.NoColorSpace (linear) which is correct for
+// normal maps and specular/roughness maps. Pass 'srgb' only for colour-like
+// secondary maps (e.g. night-lights / emissive maps).
+// ---------------------------------------------------------------------------
+export function useOptionalTexture(
+  key: string | undefined,
+  colorSpace: 'srgb' | 'linear' = 'linear',
+): THREE.Texture | null {
+  const cacheKey = key ?? '';
+
+  const [texture, setTexture] = useState<THREE.Texture | null>(() => {
+    if (!key) return null;
+    return optionalCache.get(cacheKey) ?? null;
+  });
+
+  useEffect(() => {
+    if (!key) return;
+
+    // Already resolved (success or permanent miss recorded as null in cache).
+    if (optionalCache.has(cacheKey)) {
+      setTexture(optionalCache.get(cacheKey) ?? null);
+      return;
+    }
+
+    const url = textureUrl(key);
+    const loader = new THREE.TextureLoader();
+
+    loader.load(
+      url,
+      (loaded) => {
+        loaded.colorSpace =
+          colorSpace === 'srgb' ? THREE.SRGBColorSpace : THREE.NoColorSpace;
+        loaded.anisotropy = 4;
+        optionalCache.set(cacheKey, loaded);
+        setTexture(loaded);
+      },
+      undefined,
+      () => {
+        // File absent or failed — record permanent null so we don't retry.
+        optionalCache.set(cacheKey, null);
+        if (!warned.has(cacheKey)) {
+          warned.add(cacheKey);
+          console.info(`[textures] optional map "${key}" not found — skipped.`);
+        }
+      },
+    );
+  }, [key, colorSpace, cacheKey]);
 
   return texture;
 }

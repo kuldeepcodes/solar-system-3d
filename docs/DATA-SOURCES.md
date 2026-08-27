@@ -67,7 +67,6 @@ Files downloaded include (names may vary by version):
 | `earth_daymap.jpg` | Earth (day) |
 | `earth_nightmap.jpg` | Earth (night lights) |
 | `earth_clouds.jpg` | Earth cloud layer |
-| `earth_normal.jpg` | Earth normal map |
 | `moon.jpg` | Earth's Moon |
 | `mars.jpg` | Mars |
 | `jupiter.jpg` | Jupiter |
@@ -75,6 +74,105 @@ Files downloaded include (names may vary by version):
 | `saturn_ring_alpha.png` | Saturn rings |
 | `uranus.jpg` | Uranus |
 | `neptune.jpg` | Neptune |
+| `ceres_fictional.jpg` | Ceres (fictional/artistic) |
+| `eris_fictional.jpg` | Eris (fictional/artistic) |
+| `haumea_fictional.jpg` | Haumea (fictional/artistic) |
+| `makemake_fictional.jpg` | Makemake (fictional/artistic) |
+
+**Normal / specular maps:** Solar System Scope previously offered bump, normal, and specular maps
+as separate packs (e.g. `2k_earth_normal_map.jpg`, `2k_earth_specular_map.jpg`). As of 2025 these
+files return `text/html` from the free download endpoint, indicating they have been removed from or
+moved behind the paid tier. No alternative verified free JPEG normal-map source was found after
+exhaustive probing (NASA/USGS publish TIFF height maps, not RGB normal maps). The download
+framework is in place (`earth_normal`, `moon_normal`, … keys in `fetch-textures.mjs`); if these
+URLs are ever re-verified, add them there and they will be used automatically.
+
+---
+
+### USGS Astrogeology Science Center / NASA
+
+**Source:** [https://astrogeology.usgs.gov/](https://astrogeology.usgs.gov/)  
+**Licence:** U.S. Government Work — public domain (17 U.S.C. § 105)  
+**Used for:** Galilean moon mosaics; Pluto, Triton, and Enceladus surface maps  
+**How obtained:** Downloaded at setup time via `npm run textures`; stored in `public/textures/` (gitignored)
+
+Data products from the NASA Galileo, Voyager, Cassini, and New Horizons missions.
+
+| Texture | Body | Mission source |
+|---------|------|----------------|
+| `io.jpg` | Io | Galileo SSI + Voyager |
+| `europa.jpg` | Europa | Galileo SSI + Voyager |
+| `ganymede.jpg` | Ganymede | Galileo SSI + Voyager |
+| `callisto.jpg` | Callisto | Galileo SSI + Voyager |
+| `pluto.jpg` | Pluto | New Horizons (Jul 2017) |
+| `triton.jpg` | Triton | Voyager 2 |
+| `enceladus.jpg` | Enceladus | Cassini ISS |
+
+Bodies with no verified equirectangular source (Titan, Phobos, Deimos) fall back to
+procedural textures at runtime; see *Procedural Texture Fallback* below.
+
+---
+
+### Wikimedia Commons — Public Domain (NASA / Cassini Imaging Team)
+
+**Source:** [https://commons.wikimedia.org/](https://commons.wikimedia.org/)  
+**Licence:** Public domain — NASA / Cassini Imaging Team  
+**How obtained:** Downloaded at setup time via `npm run textures`; stored in `public/textures/` (gitignored)
+
+| Texture | Body | Dimensions | Commons page |
+|---------|------|------------|--------------|
+| `titan.jpg` | Titan | 1877×1069 equirectangular | [2009 Map of Titan cylindrical projection](https://commons.wikimedia.org/wiki/File:2009_Map_of_Titan_cylindrical_projection.jpg) |
+
+---
+
+### Wikimedia Commons — USGS / Public Domain
+
+**Source:** [https://commons.wikimedia.org/](https://commons.wikimedia.org/)  
+**Licence:** Public domain — United States Geological Survey  
+**How obtained:** Downloaded at setup time via `npm run textures`; stored in `public/textures/` (gitignored)
+
+| Texture | Body | Dimensions | Commons page |
+|---------|------|------------|--------------|
+| `phobos.png` | Phobos | 5499×2999 | [USGS-Phobos-MarsMoon-Map](https://commons.wikimedia.org/wiki/File:USGS-Phobos-MarsMoon-Map.png) |
+
+---
+
+### Wikimedia Commons — CC BY-SA 3.0
+
+**Source:** [https://commons.wikimedia.org/](https://commons.wikimedia.org/)  
+**Licence:** [Creative Commons Attribution-ShareAlike 3.0 Unported (CC BY-SA 3.0)](https://creativecommons.org/licenses/by-sa/3.0/)  
+**Authors:** Askaniy Anpilogov & John van Vliet  
+**How obtained:** Downloaded at setup time via `npm run textures`; stored in `public/textures/` (gitignored)
+
+Attribution as required by the licence: "Deimos map by Askaniy Anpilogov & John van Vliet via Wikimedia Commons, licensed under CC BY-SA 3.0."
+
+| Texture | Body | Dimensions | Commons page |
+|---------|------|------------|--------------|
+| `deimos.png` | Deimos | 4096×2048 equirectangular | [Deimos map by Askaniy](https://commons.wikimedia.org/wiki/File:Deimos_map_by_Askaniy.png) |
+
+---
+
+## Derived Normal Maps
+
+`src/lib/deriveNormalMap.ts` synthesises tangent-space normal maps at runtime from each body's colour map, using a Sobel operator on luminance. No external files or licences are required — the derivation runs entirely from the already-licensed colour maps.
+
+**Technique:**
+
+1. Draw `source.image` to a 1024×512 offscreen canvas (downscaling if needed).
+2. Compute per-pixel luminance: `L = 0.2126R + 0.7152G + 0.0722B` (BT.709).
+3. Apply a 3×3 Sobel kernel to obtain horizontal (dX) and vertical (dY) gradients.
+   - Horizontal wrapping at the seam (equirectangular maps are seamless in longitude).
+   - Vertical clamping at the poles.
+4. Normal vector: `normalise(vec3(-dX·s, -dY·s, 1))`, packed to RGB 0–255.
+5. Output a `THREE.CanvasTexture` with `colorSpace = THREE.NoColorSpace` (linear).
+
+**Why this works:** For airless, heavily cratered bodies (Moon, Mercury, Phobos, Deimos, Io, etc.), albedo variation correlates strongly with topography — craters, maria, and ridges are all visible in the colour map. Sobel-filtering the luminance recovers these gradients convincingly.
+
+**Scope:** Applied to all rocky and icy bodies. Gas giants are explicitly excluded — their albedo variation is atmospheric banding, not surface relief; Sobel-ing it produces incorrect ridged normals. Venus's radar-derived surface map is included at moderate strength (1.5).
+
+**Per-body strength:** Moon/Mercury/Phobos/Deimos: 2.5 (deep craters); Mars/icy moons: 2.0; Earth: 1.0 (albedo dominated by land/ocean colour contrast rather than pure relief); Venus: 1.5.
+
+Real downloaded normal maps will always be preferred over the derived version — the framework in `useDerivedNormal` probes `${textureKey}_normal.jpg` first and only falls back to derivation on a 404.
 
 ---
 
@@ -111,7 +209,12 @@ The procedural textures are entirely original code and are not derived from any 
 |------------|--------|---------|-------------------|
 | Orbital elements | JPL SSD | Public domain | Yes (as TypeScript data) |
 | Physical constants | NASA fact sheets | Public domain | Yes (as TypeScript data) |
-| Planet/moon textures | Solar System Scope | CC BY 4.0 | No (downloaded at setup) |
+| Planet/moon textures (main) | Solar System Scope | CC BY 4.0 | No (downloaded at setup) |
+| Moon/dwarf-planet textures | USGS Astrogeology / NASA | Public domain | No (downloaded at setup) |
+| Titan texture | Wikimedia Commons / NASA Cassini | Public domain | No (downloaded at setup) |
+| Phobos texture | Wikimedia Commons / USGS | Public domain | No (downloaded at setup) |
+| Deimos texture | Wikimedia Commons | CC BY-SA 3.0 | No (downloaded at setup) |
 | Gallery imagery | Wikimedia Commons | Various free (CC BY-SA 4.0 / PD) | No (loaded at runtime) |
 | Eclipse dates | NASA Eclipse Site | Public domain | Yes (as TypeScript data) |
 | Procedural textures | Original code | MIT | Yes |
+| Derived normal maps | Computed from colour maps | Same as colour map source | No (computed at runtime) |

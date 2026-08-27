@@ -6,7 +6,7 @@ import { focusOnSite } from '../scene/siteFocus';
 export function WondersPanel() {
   const wondersVisible = useUIStore((s) => s.wondersVisible);
   const activeWonderId = useUIStore((s) => s.activeWonderId);
-  const { setWondersVisible, closePanel } = useUIStore();
+  const { setWondersVisible, closePanel, enterWonderExplore } = useUIStore();
 
   function handleSiteClick(id: string) {
     const site = WONDERS.find((w) => w.id === id);
@@ -42,35 +42,52 @@ export function WondersPanel() {
         {WONDERS.map((site) => {
           const isActive = site.id === activeWonderId;
           return (
-            <button
+            <div
               key={site.id}
-              type="button"
-              aria-label={`Select ${site.name}`}
-              aria-pressed={isActive}
-              onClick={() => handleSiteClick(site.id)}
-              className={`w-full rounded-xl border px-3 py-2.5 text-left transition-colors ${
+              className={`w-full rounded-xl border transition-colors ${
                 isActive
                   ? 'border-accent-400/50 bg-accent-500/15'
                   : 'border-white/8 bg-white/4 hover:border-white/15 hover:bg-white/6'
               }`}
             >
-              <div className="flex items-start justify-between gap-2">
-                <div className="min-w-0">
-                  <p className="truncate text-xs font-semibold text-slate-100">{site.name}</p>
-                  <p className="text-[0.65rem] text-slate-400">{site.country} · {site.built}</p>
-                </div>
-                <div className="flex shrink-0 flex-col items-end gap-1">
-                  <span className="rounded-full bg-accent-500/20 px-2 py-0.5 text-[0.6rem] text-accent-300">
-                    {site.category}
-                  </span>
-                  {site.honorary && (
-                    <span className="rounded-full bg-solar-400/20 px-2 py-0.5 text-[0.6rem] text-solar-300">
-                      Honorary
+              <button
+                type="button"
+                aria-label={`Fly to ${site.name} on the globe`}
+                aria-pressed={isActive}
+                onClick={() => handleSiteClick(site.id)}
+                className="w-full px-3 pt-2.5 pb-1.5 text-left"
+              >
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <p className="truncate text-xs font-semibold text-slate-100">{site.name}</p>
+                    <p className="text-[0.65rem] text-slate-400">
+                      {site.country} · {site.built}
+                    </p>
+                  </div>
+                  <div className="flex shrink-0 flex-col items-end gap-1">
+                    <span className="rounded-full bg-accent-500/20 px-2 py-0.5 text-[0.6rem] text-accent-300">
+                      {site.category}
                     </span>
-                  )}
+                    {site.honorary && (
+                      <span className="rounded-full bg-solar-400/20 px-2 py-0.5 text-[0.6rem] text-solar-300">
+                        Honorary
+                      </span>
+                    )}
+                  </div>
                 </div>
+              </button>
+
+              <div className="px-3 pb-2.5">
+                <button
+                  type="button"
+                  aria-label={`Walk around ${site.name} in 3D`}
+                  onClick={() => enterWonderExplore(site.id)}
+                  className="hud-button w-full py-1.5 text-[0.68rem] font-medium"
+                >
+                  ⛶ Walk around in 3D
+                </button>
               </div>
-            </button>
+            </div>
           );
         })}
       </div>

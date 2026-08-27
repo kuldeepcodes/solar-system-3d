@@ -31,6 +31,14 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      # Textures are intentionally gitignored (CC BY 4.0 assets are not
+      # redistributed in this repo), so the deployed demo must fetch them at
+      # build time. `continue-on-error` keeps a flaky upstream from blocking a
+      # release - the app falls back to procedural textures if this step fails.
+      - name: Fetch planet textures
+        run: npm run textures
+        continue-on-error: true
+
       - name: Build
         run: npm run build
         env:

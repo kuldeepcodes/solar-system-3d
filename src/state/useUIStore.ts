@@ -37,6 +37,8 @@ interface UIState {
 
   activeEclipseId: string | null;
   surfaceBodyId: string | null;
+  /** Site id currently being explored on foot, or null when in space. */
+  exploringWonderId: string | null;
 
   select: (id: string | null) => void;
   /**
@@ -70,6 +72,8 @@ interface UIState {
   setActiveEclipse: (id: string | null) => void;
   enterSurface: (bodyId: string) => void;
   exitSurface: () => void;
+  enterWonderExplore: (siteId: string) => void;
+  exitWonderExplore: () => void;
   escape: () => void;
 }
 
@@ -102,6 +106,7 @@ export const useUIStore = create<UIState>((set, get) => ({
 
   activeEclipseId: null,
   surfaceBodyId: null,
+  exploringWonderId: null,
 
   select: (selectedId) => set({ selectedId }),
   focus: (id, options) =>
@@ -150,9 +155,14 @@ export const useUIStore = create<UIState>((set, get) => ({
   enterSurface: (bodyId) => set({ mode: 'surface', surfaceBodyId: bodyId, focusId: bodyId }),
   exitSurface: () => set({ mode: 'orbit', surfaceBodyId: null }),
 
+  enterWonderExplore: (siteId) =>
+    set({ exploringWonderId: siteId, activeWonderId: siteId, selectedId: siteId }),
+  exitWonderExplore: () => set({ exploringWonderId: null }),
+
   /** Escape backs out one layer at a time rather than dumping all state at once. */
   escape: () => {
     const state = get();
+    if (state.exploringWonderId) return set({ exploringWonderId: null });
     if (state.searchOpen) return set({ searchOpen: false });
     if (state.mode !== 'orbit') return set({ mode: 'orbit', surfaceBodyId: null, travelPlaying: false });
     if (state.activeWonderId) return set({ activeWonderId: null });
