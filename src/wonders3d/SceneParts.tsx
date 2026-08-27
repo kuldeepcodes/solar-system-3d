@@ -85,11 +85,15 @@ export function PhotoPanel({
         }}
       >
         <planeGeometry args={[width, height]} />
-        {texture ? (
-          <meshBasicMaterial map={texture} toneMapped={false} side={THREE.DoubleSide} />
-        ) : (
-          <meshStandardMaterial color={failed ? '#3a4457' : '#141c2b'} roughness={1} side={THREE.DoubleSide} />
-        )}
+        {/* See PhotoRing: the key forces a new material so the added map
+            recompiles the shader, and colour is set on both branches. */}
+        <meshBasicMaterial
+          key={texture ? 'photo' : 'placeholder'}
+          map={texture}
+          color={texture ? '#ffffff' : failed ? '#3a4457' : '#141c2b'}
+          toneMapped={false}
+          side={THREE.DoubleSide}
+        />
       </mesh>
 
       {/* Support posts */}

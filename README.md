@@ -57,8 +57,26 @@ Each body shows: diameter, distance from the Sun, surface temperature range, sur
 - Solar and lunar eclipse modes with accurate geometry derived from real orbital data
 - Eclipse seasons stay in step across decades thanks to the Moon's node regression
 
-### 🏔️ Earth: 7 Wonders of the World Layer
-Markers placed at the true geographic coordinates of all eight sites (see [`docs/FEATURES.md`](docs/FEATURES.md) for full coordinates). Double-click a marker to fly to it; a detail card shows the site name, location, and a brief description.
+### 🏔️ Earth: 7 Wonders of the World
+
+Markers sit at the true geographic coordinates of all eight sites (see
+[`docs/FEATURES.md`](docs/FEATURES.md) for the full list). Selecting one flies the camera to a
+low-orbit view directly above it — and because a landmark on the night side would be invisible, the
+simulation clock is first advanced to that site's **local noon**, solved numerically from real
+orbital geometry, so it always arrives sunlit.
+
+From there, **Walk around in 3D** opens a dedicated immersive experience with three views:
+
+| View | What it is |
+|------|-----------|
+| **360° view** | A real equirectangular photosphere. You stand at the centre and look around — drag to turn, scroll to zoom. Available for the Great Wall, Petra, Machu Picchu, the Colosseum, the Taj Mahal and Giza. |
+| **Photo gallery** | An immersive ring of real photographs surrounding you; click any one to enlarge it with full attribution. Used for Chichén Itzá and Christ the Redeemer, which have no freely-licensed panorama. |
+| **3D model** | A walkable procedural reconstruction (WASD + mouse look), offered as a schematic diagram of the site's layout. |
+
+All in-app imagery is public-domain or Creative Commons and credited in place. Panoramas and
+photographs are streamed from Wikimedia Commons rather than committed to this repository. A
+**Virtual tours** button links out to Destination360, AirPano and Google Arts & Culture — those
+operators shoot their own panoramas and retain copyright, so they are linked, never reproduced.
 
 ### 🚀 Spacecraft Travel Mode
 Point-to-point travel between any two bodies with live telemetry: elapsed time, distance covered, distance remaining, estimated arrival, and one-way light-delay.
