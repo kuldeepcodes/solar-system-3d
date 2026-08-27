@@ -1,0 +1,155 @@
+@import 'tailwindcss';
+
+@theme {
+  --color-space-950: #04070f;
+  --color-space-900: #070c18;
+  --color-space-800: #0c1424;
+  --color-space-700: #142033;
+  --color-space-600: #1e2d45;
+
+  --color-accent-100: #d6f1ff;
+  --color-accent-300: #8fd8ff;
+  --color-accent-400: #4fc3ff;
+  --color-accent-500: #1aa7f0;
+  --color-accent-600: #0b7fc0;
+
+  --color-solar-300: #ffd98a;
+  --color-solar-400: #ffb454;
+  --color-solar-500: #ff8c2b;
+
+  --font-display: 'Inter', 'Segoe UI', system-ui, sans-serif;
+}
+
+@layer base {
+  * {
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  html,
+  body,
+  #root {
+    height: 100%;
+    margin: 0;
+    overflow: hidden;
+  }
+
+  body {
+    background: #04070f;
+    color: #e6eefc;
+    font-family: var(--font-display);
+    text-rendering: optimizeLegibility;
+    overscroll-behavior: none;
+  }
+
+  canvas {
+    display: block;
+    touch-action: none;
+  }
+
+  ::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: rgba(143, 216, 255, 0.22);
+    border-radius: 999px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: rgba(143, 216, 255, 0.38);
+  }
+
+  :focus-visible {
+    outline: 2px solid #4fc3ff;
+    outline-offset: 2px;
+  }
+}
+
+@layer components {
+  /*
+   * Glassmorphism surface.
+   *
+   * `backdrop-filter` is expensive when composited over a continuously
+   * redrawing WebGL canvas, so the blur radius is kept modest and panels are
+   * promoted to their own compositor layer with `will-change`.
+   */
+  .glass {
+    background: linear-gradient(145deg, rgba(18, 30, 52, 0.74) 0%, rgba(9, 16, 30, 0.7) 100%);
+    backdrop-filter: blur(14px) saturate(140%);
+    -webkit-backdrop-filter: blur(14px) saturate(140%);
+    border: 1px solid rgba(143, 216, 255, 0.16);
+    box-shadow:
+      0 8px 32px rgba(0, 0, 0, 0.55),
+      inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    will-change: transform;
+  }
+
+  .glass-subtle {
+    background: rgba(12, 20, 36, 0.6);
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+    border: 1px solid rgba(143, 216, 255, 0.1);
+  }
+
+  .hud-button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    border-radius: 0.6rem;
+    border: 1px solid rgba(143, 216, 255, 0.16);
+    background: rgba(20, 32, 51, 0.6);
+    color: #cfe4ff;
+    transition:
+      background 150ms ease,
+      border-color 150ms ease,
+      color 150ms ease,
+      transform 150ms ease;
+  }
+
+  .hud-button:hover {
+    background: rgba(31, 52, 82, 0.82);
+    border-color: rgba(143, 216, 255, 0.36);
+    color: #eaf5ff;
+  }
+
+  .hud-button:active {
+    transform: scale(0.97);
+  }
+
+  .hud-button[data-active='true'] {
+    background: rgba(26, 167, 240, 0.22);
+    border-color: rgba(79, 195, 255, 0.6);
+    color: #d6f1ff;
+  }
+}
+
+@layer utilities {
+  .scrollbar-none {
+    scrollbar-width: none;
+  }
+
+  .scrollbar-none::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/*
+ * Respect the user's motion preference for the DOM layer only. The 3D
+ * simulation keeps animating - it is the content itself - but panel and HUD
+ * transitions are neutralised.
+ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
