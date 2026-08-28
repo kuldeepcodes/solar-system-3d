@@ -54,6 +54,10 @@ export function useBodyTexture(
   });
 
   useEffect(() => {
+    // An empty key means "this body has no such map" - skip the request rather
+    // than fetching a sentinel filename that is guaranteed to 404.
+    if (!key) return;
+
     // Already loaded a real texture for this key.
     if (bodyCache.has(key) && !(bodyCache.get(key) instanceof THREE.CanvasTexture)) {
       setTexture(bodyCache.get(key)!);
@@ -204,29 +208,14 @@ export function useDerivedNormal(
       return;
     }
 
-    // --- Priority 3: probe real file, derive on miss ---
-    if (!optionalCache.has(normalKey)) {
-      const loader = new THREE.TextureLoader();
-      loader.load(
-        textureUrl(normalKey),
-        (loaded) => {
-          loaded.colorSpace = THREE.NoColorSpace;
-          loaded.anisotropy  = 4;
-          optionalCache.set(normalKey, loaded);
-          derivedNormalCache.set(normalKey, loaded);
-          setNormalMap(loaded);
-        },
-        undefined,
-        () => {
-          // File absent — record miss and derive.
-          optionalCache.set(normalKey, null);
-          attemptDerive();
-        },
-      );
-    } else {
-      // Miss already recorded; derive now.
-      attemptDerive();
-    }
+    // --- Priority 3: derive from the colour map ---
+    //
+    // No `<key>_normal` files are published by any of our upstream sources, so
+    // probing for one just produces a guaranteed 404 per body on every page
+    // load. If a real normal map is ever shipped, `fetch-textures.mjs` will
+    // populate `optionalCache` via `useOptionalTexture` and priority 1 above
+    // will pick it up.
+    attemptDerive();
 
     return () => { if (timeoutId !== undefined) clearTimeout(timeoutId); };
   }, [textureKey, colorMap, strength, normalKey]);

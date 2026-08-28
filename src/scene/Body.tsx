@@ -97,11 +97,10 @@ export function Body({ body, children }: BodyProps) {
 
   const kind = useMemo(() => textureKindFor(body), [body]);
   const map = useBodyTexture(body.textureKey, body.color, kind);
-  const cloudMap = useBodyTexture(
-    body.cloudsTextureKey ?? `${body.id}_clouds_none`,
-    '#ffffff',
-    'cloud',
-  );
+  // Passing an empty key means "no cloud layer" and skips the network request
+  // entirely. A sentinel like `<id>_clouds_none` would be fetched and 404 for
+  // every cloudless body, which is 20-odd pointless requests per page load.
+  const cloudMap = useBodyTexture(body.cloudsTextureKey ?? '', '#ffffff', 'cloud');
 
   // Secondary maps — only attempted for bodies where they plausibly exist.
   // Normal maps: prefer a real downloaded file; synthesise from colour map if absent.
