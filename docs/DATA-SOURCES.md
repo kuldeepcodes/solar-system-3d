@@ -56,6 +56,32 @@ The epoch for all elements is **J2000.0 = JD 2451545.0 = 2000 January 1.5 TT**.
 
 Attribution as required by the licence: "Textures from Solar System Scope (https://www.solarsystemscope.com/textures/) by INOVE, licensed under CC BY 4.0."
 
+#### ⚠️ CI/Datacenter IP Blocking
+
+`solarsystemscope.com` blocks downloads from GitHub Actions runners and other datacenter IP
+ranges.  Every SSS-primary texture key in `scripts/fetch-textures.mjs` therefore has a
+**Wikimedia Commons fallback** pointing to the identical files that SSS/INOVE themselves
+uploaded to Wikimedia Commons under the same CC BY 4.0 licence.  `upload.wikimedia.org` is
+a proper CDN that does not block datacenter IPs and is confirmed reachable from GitHub
+Actions.
+
+The download chain is:
+1. `solarsystemscope.com` — best quality, works from residential/office IPs
+2. `upload.wikimedia.org` (Wikimedia Commons mirror of the SSS pack) — works everywhere including CI
+3. Graceful skip — app uses procedural texture at runtime
+
+All Wikimedia fallback URLs were verified via the Commons imageinfo API and confirmed to
+return HTTP 200 with `Content-Type: image/*` before being recorded in the script.
+
+#### Local CI simulation
+
+Set `SKIP_SSS=1` to force the script to skip the SSS primary and go straight to Wikimedia
+fallbacks, replicating the CI environment locally:
+
+```sh
+SKIP_SSS=1 node scripts/fetch-textures.mjs --force
+```
+
 Files downloaded include (names may vary by version):
 
 | Texture | Body |
@@ -110,6 +136,39 @@ Data products from the NASA Galileo, Voyager, Cassini, and New Horizons missions
 
 Bodies with no verified equirectangular source (Titan, Phobos, Deimos) fall back to
 procedural textures at runtime; see *Procedural Texture Fallback* below.
+
+---
+
+### Wikimedia Commons — Solar System Scope Mirror (CC BY 4.0)
+
+**Source:** [https://commons.wikimedia.org/](https://commons.wikimedia.org/)  
+**Licence:** [Creative Commons Attribution 4.0 International (CC BY 4.0)](https://creativecommons.org/licenses/by/4.0/)  
+**Publisher of original textures:** INOVE / Solar System Scope  
+**How obtained:** Downloaded at setup time via `npm run textures` as a fallback when solarsystemscope.com is unreachable (e.g. GitHub Actions CI); stored in `public/textures/` (gitignored)
+
+SSS/INOVE uploaded their full texture pack to Wikimedia Commons. The textures are identical to the primary SSS downloads and carry the same CC BY 4.0 licence. `upload.wikimedia.org` is a CDN that does not block datacenter IP ranges.
+
+| Texture key | Wikimedia Commons file |
+|-------------|------------------------|
+| `sun` | [Solarsystemscope texture 2k sun](https://commons.wikimedia.org/wiki/File:Solarsystemscope_texture_2k_sun.jpg) |
+| `mercury` | [Solarsystemscope texture 2k mercury](https://commons.wikimedia.org/wiki/File:Solarsystemscope_texture_2k_mercury.jpg) |
+| `venus` | [Solarsystemscope texture 2k venus surface](https://commons.wikimedia.org/wiki/File:Solarsystemscope_texture_2k_venus_surface.jpg) |
+| `venus_atmosphere` | [Solarsystemscope texture 2k venus atmosphere](https://commons.wikimedia.org/wiki/File:Solarsystemscope_texture_2k_venus_atmosphere.jpg) |
+| `earth` | [Solarsystemscope texture 2k earth daymap](https://commons.wikimedia.org/wiki/File:Solarsystemscope_texture_2k_earth_daymap.jpg) |
+| `earth_clouds` | [Solarsystemscope texture 2k earth clouds](https://commons.wikimedia.org/wiki/File:Solarsystemscope_texture_2k_earth_clouds.jpg) |
+| `earth_night` | [Solarsystemscope texture 2k earth nightmap](https://commons.wikimedia.org/wiki/File:Solarsystemscope_texture_2k_earth_nightmap.jpg) |
+| `moon` | [Solarsystemscope texture 2k moon](https://commons.wikimedia.org/wiki/File:Solarsystemscope_texture_2k_moon.jpg) |
+| `mars` | [Solarsystemscope texture 2k mars](https://commons.wikimedia.org/wiki/File:Solarsystemscope_texture_2k_mars.jpg) |
+| `jupiter` | [Solarsystemscope texture 2k jupiter](https://commons.wikimedia.org/wiki/File:Solarsystemscope_texture_2k_jupiter.jpg) |
+| `saturn` | [Solarsystemscope texture 2k saturn](https://commons.wikimedia.org/wiki/File:Solarsystemscope_texture_2k_saturn.jpg) |
+| `saturn_ring` | [Solarsystemscope texture 2k saturn ring alpha](https://commons.wikimedia.org/wiki/File:Solarsystemscope_texture_2k_saturn_ring_alpha.png) |
+| `uranus` | [Solarsystemscope texture 2k uranus](https://commons.wikimedia.org/wiki/File:Solarsystemscope_texture_2k_uranus.jpg) |
+| `neptune` | [Solarsystemscope texture 2k neptune](https://commons.wikimedia.org/wiki/File:Solarsystemscope_texture_2k_neptune.jpg) |
+| `ceres` | [Solarsystemscope texture 2k ceres fictional](https://commons.wikimedia.org/wiki/File:Solarsystemscope_texture_2k_ceres_fictional.jpg) |
+| `eris` | [Solarsystemscope texture 4k eris fictional](https://commons.wikimedia.org/wiki/File:Solarsystemscope_texture_4k_eris_fictional.jpg) |
+| `haumea` | [Solarsystemscope texture 2k haumea fictional](https://commons.wikimedia.org/wiki/File:Solarsystemscope_texture_2k_haumea_fictional.jpg) |
+| `makemake` | [Solarsystemscope texture 4k makemake fictional](https://commons.wikimedia.org/wiki/File:Solarsystemscope_texture_4k_makemake_fictional.jpg) |
+| `stars_milky_way` | [Solarsystemscope texture 2k stars milky way](https://commons.wikimedia.org/wiki/File:Solarsystemscope_texture_2k_stars_milky_way.jpg) |
 
 ---
 
@@ -210,6 +269,7 @@ The procedural textures are entirely original code and are not derived from any 
 | Orbital elements | JPL SSD | Public domain | Yes (as TypeScript data) |
 | Physical constants | NASA fact sheets | Public domain | Yes (as TypeScript data) |
 | Planet/moon textures (main) | Solar System Scope | CC BY 4.0 | No (downloaded at setup) |
+| Planet/moon textures (CI fallback) | Wikimedia Commons (SSS mirror) | CC BY 4.0 | No (downloaded at setup) |
 | Moon/dwarf-planet textures | USGS Astrogeology / NASA | Public domain | No (downloaded at setup) |
 | Titan texture | Wikimedia Commons / NASA Cassini | Public domain | No (downloaded at setup) |
 | Phobos texture | Wikimedia Commons / USGS | Public domain | No (downloaded at setup) |
